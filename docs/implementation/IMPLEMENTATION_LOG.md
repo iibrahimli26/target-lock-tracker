@@ -10,6 +10,14 @@ Append one entry per implementation pass (one story per pass), **most recent fir
 
 ---
 
+## Pass: 2026-11-20 — Fix: no notice when the lock zone is missing (found by the operator with a real clip)
+
+**Branch:** `fix/show-missing-lock-zone`
+**Found by:** the operator tracked a real 640 × 360 drone clip (727 frames) without drawing a lock zone. Every frame was UNLOCKED, which is correct by AC-10.3, but nothing on screen said why, so it looked like a fault.
+**Red:** two browser tests now require a "No lock zone" notice before a zone exists and the zone's size after; 2 failed.
+**Green:** the status panel shows the notice or the zone's size and position; 14 browser tests pass.
+**Deviation:** none of the acceptance criteria required this notice; it closes a gap in US-10 found in real use.
+
 ## Pass: 2026-11-20 — Fix: Pause landed one frame off (found by the operator's test run on Windows)
 
 **Branch:** `bugfix/pause-frame-mismatch` · **Red:** `0930cdb` · **Green:** `2459d7b`
