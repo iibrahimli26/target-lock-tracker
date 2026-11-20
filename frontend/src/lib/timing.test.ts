@@ -11,7 +11,7 @@ describe("AC-9.2 during playback the box belongs to the frame on screen", () => 
   const cfr = frameStartTimes(constant30), vfr = frameStartTimes(refV);
   it.each([[0.0, 1], [0.033, 1], [0.034, 2], [1.5, 46], [2.999, 90], [99, 90], [-1, 1]])(
     "30 fps constant: at %f s frame %i is on screen", (seconds, frame) => expect(frameNumber(frameAtTime(cfr, seconds))).toBe(frame));
-  it.each([[0.06, 1], [0.07, 2], [0.11, 3], [0.0, 1], [2.96, 60]])(
+  it.each([[0.06, 1], [0.07, 2], [0.11, 3], [0.0, 1], [2.96, 59], [2.97, 60]])(
     "REF-V: at %f s frame %i is on screen", (seconds, frame) => expect(frameNumber(frameAtTime(vfr, seconds))).toBe(frame));
   it("lists one start time per frame", () => {
     expect(cfr.length).toBe(90);
