@@ -25,7 +25,7 @@ export function Messages({ problems, warnings }: { problems: Message[]; warnings
   );
 }
 
-export function StatusPanel({ status, run }: { status: Status; run: Run | null }) {
+export function StatusPanel({ status, run, zone, videoLoaded }: { status: Status; run: Run | null; zone: [number, number, number, number] | null; videoLoaded: boolean }) {
   const percent = run && run.total_frames > 0 && run.current_frame !== null ? Math.round(((run.current_frame + 1) / run.total_frames) * 100) : 0;
   const runText: Record<Run["state"], string> = {
     idle: "Not started", running: "Tracking", completed: "Tracking finished", lost: "Target lost, waiting for a new box", stopped: "Stopped at a damaged frame",
@@ -35,6 +35,16 @@ export function StatusPanel({ status, run }: { status: Status; run: Run | null }
       <h2 className="panel-title">Lock status of this frame</h2>
       <p className="px-3 pt-2 pb-1 font-mono text-[30px] leading-none tracking-wide" style={{ color: STATUS_COLOR[status] }}
          data-testid="status" data-status={status}>{STATUS_TEXT[status]}</p>
+      {videoLoaded && (zone ? (
+        <p className="px-3 pb-1 text-graphite-400" data-testid="zone-state" data-zone="drawn">
+          Lock zone: <span className="readout text-graphite-200">{Math.round(zone[2])} × {Math.round(zone[3])}</span> px at{" "}
+          <span className="readout text-graphite-200">{Math.round(zone[0])}, {Math.round(zone[1])}</span>
+        </p>
+      ) : (
+        <p className="mx-3 mb-1 border-l-4 border-l-unlocked bg-graphite-700 px-2 py-1.5" data-testid="zone-state" data-zone="none">
+          No lock zone is drawn, so no frame can be LOCKED. Choose <b>Lock zone</b> under the picture and drag a rectangle.
+        </p>
+      ))}
       <dl className="pb-2">
         <div className="row"><dt>Tracking run</dt><dd data-testid="run-state" data-state={run?.state ?? "idle"}>{runText[run?.state ?? "idle"]}</dd></div>
         {run && run.state !== "idle" && (

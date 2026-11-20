@@ -232,7 +232,7 @@ export default function App() {
         </div>
 
         <aside className="flex flex-col gap-3">
-          <StatusPanel status={status} run={tracking?.run ?? null} />
+          <StatusPanel status={status} run={tracking?.run ?? null} zone={tracking?.zone ?? null} videoLoaded={video !== null} />
           <AnalyticsPanel analytics={tracking?.analytics ?? null} />
           <MetadataPanel video={video} />
         </aside>
