@@ -119,11 +119,11 @@
 - **Requested By**: Human operator (project owner), by the instruction quoted at the top of this log
 - **Decisions / Scope Covered**:
   - Stories US-1 to US-15 implemented: backend one story per branch with the tests committed before the code (two stories share one pass; see the log); the page in one pass for all stories.
-  - Final state: 246 backend tests, 68 page-logic tests and 13 browser tests pass with `python run.py test`; 3 opt-in tests with real 1 GB files passed when run once.
+  - Final state: 246 backend tests, 68 page-logic tests and 14 browser tests pass with `python run.py test` on the agent's Linux machine; one browser failure found on the operator's Windows machine was fixed (bugfix/pause-frame-mismatch); 3 opt-in tests with real 1 GB files passed when run once.
   - Deviations recorded in the log: no red phase for US-13, for most of US-5 and for the browser tests; one test set-up changed and one test expectation corrected, each with its reason; local merge commits instead of pull requests.
-  - Thirteen implementation questions (IQ-1 to IQ-13) were decided by the agent; none was answered by the operator.
+  - Fourteen implementation questions (IQ-1 to IQ-14) were decided by the agent; none was answered by the operator.
 - **Open Questions Resolved This Session**:
-  - IQ-1 to IQ-13 — decided by the agent (see docs/implementation/IMPLEMENTATION_LOG.md).
+  - IQ-1 to IQ-14 — decided by the agent (see docs/implementation/IMPLEMENTATION_LOG.md).
 - **Approved By**: <!-- leave blank until a human operator approves -->
 - **Approval Date**: <!-- leave blank until approved -->
 
