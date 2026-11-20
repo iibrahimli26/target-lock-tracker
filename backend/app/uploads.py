@@ -51,7 +51,11 @@ class Uploads:
             path.unlink(missing_ok=True)
             return refused(422, [msg.empty_file()]) if name else refused(400, [msg.no_file()])
 
-        metadata, problems, warnings = self.validate(path, size, self.settings)
+        try:
+            metadata, problems, warnings = self.validate(path, size, self.settings)
+        except Exception:
+            path.unlink(missing_ok=True)            # never leave a file behind, whatever went wrong
+            raise
         if problems:
             path.unlink(missing_ok=True)
             return refused(422, problems)
