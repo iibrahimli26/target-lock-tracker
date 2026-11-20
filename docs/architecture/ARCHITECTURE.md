@@ -9,6 +9,7 @@ Central index of solution-architect output for this repository. Only requirement
 | File | Scope / Topic | Started (commit) | Status |
 |---|---|---|---|
 | (this file) | Core — Feature 1: upload, validation, metadata, frame navigation | b916094 | Active |
+| [ARCHITECTURE_e64c4e2.md](./ARCHITECTURE_e64c4e2.md) | Features 2 to 6: boxes, tracking run, lock logic, analytics (AQ-11 to AQ-17) | e64c4e2 | Active |
 
 ## System overview
 
