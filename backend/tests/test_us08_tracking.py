@@ -106,10 +106,11 @@ def test_the_run_before_is_cancelled_when_tracking_starts_again(settings):
     with TestClient(app_with(settings, lambda i: Box(200, 200, 60, 60), delay=0.01)) as client:
         base = load_ref_a(client)
         first = start(client, base).json()["run"]["revision"]
-        second = start(client, base, frame=10, box=(300, 300, 40, 40)).json()["run"]["revision"]
+        # Same area as the scripted boxes, so the 50 % area rule of US-12 has nothing to object to.
+        second = start(client, base, frame=10, box=(300, 300, 60, 60)).json()["run"]["revision"]
         state = wait_for_tracking(client, base)
         assert second == first + 1 and state["run"]["revision"] == second
-        assert state["results"]["items"][10] == [300, 300, 40, 40]      # only the second run's result is there
+        assert state["results"]["items"][10] == [300, 300, 60, 60]      # only the second run's result is there
         assert state["run"]["state"] == "completed" and state["run"]["start_frame"] == 10
 
 

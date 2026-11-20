@@ -6,8 +6,15 @@ from fractions import Fraction
 
 import cv2
 
+from . import messages as msg
 from .geometry import Box
 from .lock_logic import LOST_RESULT, analytics, segments, statuses
+
+
+def area_changed(previous: Box, current: Box, limit: float = 0.5) -> bool:
+    """Feature 5: True when the box area changed by MORE than `limit` (50 %) of the
+    previous frame's area. Exactly 50 % is not a loss (OQ-28)."""
+    return abs(current.area - previous.area) > limit * previous.area
 
 
 class OpenCvTracker:
@@ -40,7 +47,8 @@ class Session:
         self.zone: Box | None = None
         self.results: list = [None] * self.frame_count      # per frame: None | LOST_RESULT | Box
         self.run = {"state": "idle", "revision": 0, "start_frame": None, "current_frame": None,
-                    "processed_frames": 0, "total_frames": self.frame_count, "processing_fps": 0.0}
+                    "processed_frames": 0, "total_frames": self.frame_count, "processing_fps": 0.0,
+                    "lost_at": None, "lost_reason": None, "lost_message": None}
         self._thread: threading.Thread | None = None
         self._cancel = threading.Event()
 
@@ -64,7 +72,8 @@ class Session:
             frame, box = self.target["frame"], self.target["box"]
             self.results[frame:] = [None] * (self.frame_count - frame)
             self.run.update(state="running", revision=self.run["revision"] + 1, start_frame=frame,
-                            current_frame=frame, processed_frames=0, processing_fps=0.0)
+                            current_frame=frame, processed_frames=0, processing_fps=0.0,
+                            lost_at=None, lost_reason=None, lost_message=None)
             self._cancel = threading.Event()
             self._thread = threading.Thread(target=self._track, args=(frame, box, self._cancel), daemon=True)
             self._thread.start()
@@ -77,19 +86,25 @@ class Session:
                 capture.set(cv2.CAP_PROP_POS_FRAMES, start)
             ok, picture = capture.read()
             if not ok:
-                return self._finish(cancel, "completed")
+                return self._lose(cancel, start, "frame_unreadable")
             tracker = self.tracker_factory()
             tracker.init(picture, box)
             began = time.monotonic()
             self._record(cancel, start, box, 1, began)
+            previous = box                           # the area rule starts afresh from the selected box
             for index in range(start + 1, self.frame_count):
                 if cancel.is_set():
                     return
                 ok, picture = capture.read()
-                if not ok:
-                    break
+                if not ok:                           # OQ-32: damaged file
+                    return self._lose(cancel, index, "frame_unreadable")
                 found = tracker.update(picture)
-                self._record(cancel, index, found if found is not None else LOST_RESULT, index - start + 1, began)
+                if found is None:
+                    return self._lose(cancel, index, "tracker_failed")
+                if area_changed(previous, found, self.settings.area_change_limit):
+                    return self._lose(cancel, index, "area_change")
+                self._record(cancel, index, found, index - start + 1, began)
+                previous = found
             self._finish(cancel, "completed")
         finally:
             capture.release()
@@ -101,6 +116,16 @@ class Session:
             self.results[index] = result
             elapsed = max(time.monotonic() - began, 1e-6)
             self.run.update(current_frame=index, processed_frames=done, processing_fps=round(done / elapsed, 1))
+
+    def _lose(self, cancel, index: int, reason: str) -> None:
+        """Tracking stops at `index` and waits for a new target box. That frame and all
+        frames after it count as LOST until then (OQ-27)."""
+        with self.lock:
+            if cancel.is_set():
+                return
+            self.results[index:] = [LOST_RESULT] * (self.frame_count - index)
+            self.run.update(state="stopped" if reason == "frame_unreadable" else "lost", current_frame=index,
+                            lost_at=index, lost_reason=reason, lost_message=msg.tracking_lost(reason, index).message)
 
     def _finish(self, cancel, state: str) -> None:
         with self.lock:

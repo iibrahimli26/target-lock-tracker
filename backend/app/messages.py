@@ -150,3 +150,12 @@ def box_outside_picture(box, width: int, height: int) -> Message:
 
 def no_target() -> Message:
     return Message("no_target", "Select a target first: draw a box around it on the picture, then start tracking.")
+
+
+def tracking_lost(reason: str, index: int) -> Message:
+    frame = num(index + 1)
+    if reason == "frame_unreadable":
+        return Message("tracking_stopped", f"Tracking stopped on frame {frame}: the file is damaged and this frame cannot be read.")
+    why = ("the tracker reported failure" if reason == "tracker_failed"
+           else "the box area changed by more than 50 % between two frames")
+    return Message("tracking_lost", f"Tracking was lost on frame {frame}: {why}. Draw a new box around the target to continue.")
