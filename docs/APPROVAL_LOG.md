@@ -2,7 +2,11 @@
 
 > Single file shared by the **entire pipeline** (`requirement-analysis`, `solution-architect`, and any future stage). Exactly **one active entry** exists at a time, regardless of which stage/skill created it, with status `Pending Approval`. Update it in place as decisions accumulate during a session — never create a second pending entry. Once a human operator explicitly sets it to `Approved` or `Rejected` and the associated commit/PR lands, move it to History below and leave the active slot empty for the next stage to use.
 
-## Active Entry
+> **How this log is used from 2026-11-20 onward.** On 2026-11-20, with the Stage 1 entry for Feature 1 still unsigned, the operator wrote in chat: "continue and finish the project and give me final version that i can push to github". From that point the agent did not stop at the approval gates; it wrote each stage's documents and continued. The agent approved nothing: **Approved By** and **Approval Date** are blank in every entry and are for the operator to fill in after reading that stage. Because several stages are waiting at the same time, the single Active Entry slot is replaced below by a list of entries awaiting the operator's signature. Decisions that the agent took on the operator's behalf are marked as such in the related documents, each with its reason.
+
+## Entries awaiting the operator's signature
+
+### Entry 1 — Requirement Analysis — Feature 1
 
 - **Status**: Pending Approval
 - **Stage**: Requirement Analysis
@@ -55,6 +59,22 @@
   - OQ-16 — Frames counted from 1 (by delegation); frame time shown (operator): AC-6.10a to AC-6.10c written.
   - OQ-17 — By delegation: position stays at the ends with the button inactive; stays on the last frame shown after the warning: AC-6.11a to AC-6.11e written.
   - OQ-19 — By delegation: 3GP with H.264 accepted like MP4: AC-2.10a and AC-2.10b written.
+- **Approved By**: <!-- leave blank until a human operator approves -->
+- **Approval Date**: <!-- leave blank until approved -->
+
+### Entry 2 — Solution Architecture — Feature 1
+
+- **Status**: Pending Approval
+- **Stage**: Solution Architecture
+- **Session Started**: 2026-11-20
+- **Related Doc(s)**: docs/architecture/ARCHITECTURE.md (Feature 1); input: Entry 1 (unsigned when this stage was written)
+- **Requested By**: Human operator (project owner), by the instruction quoted at the top of this log
+- **Decisions / Scope Covered**:
+  - Entities: Video, VideoMetadata, Problem/Message, FramePosition, each with invariants, boundary behaviour and concurrency analysis.
+  - Decisions with benefit/drawback tables: reading container and codec information; how a frame gets on screen; upload transport; storage and state; backend and frontend stack; test strategy.
+  - All ten architecture questions (AQ-1 to AQ-10) were decided by the agent on the operator's instruction to continue; none was answered by the operator. Each has its reason in the document, and the operator can overturn any of them.
+- **Open Questions Resolved This Session**:
+  - AQ-1 to AQ-10 — decided by the agent (see docs/architecture/ARCHITECTURE.md, Open Questions).
 - **Approved By**: <!-- leave blank until a human operator approves -->
 - **Approval Date**: <!-- leave blank until approved -->
 
