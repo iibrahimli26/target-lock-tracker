@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { type FrameResult, type Message, type Tracking, type Video, api } from "./api";
-import { AnalyticsPanel, Messages, MetadataPanel, StatusPanel, Timeline } from "./components/Panels";
+import { AnalyticsPanel, Messages, MetadataPanel, type Shown, StatusPanel, TelemetryPanel, Timeline } from "./components/Panels";
 import { Stage, type Tool } from "./components/Stage";
-import { canStep, decideUpload, latestOnly, statusAt } from "./lib/flow";
+import { canPlay, canStep, decideUpload, displayStatus, latestOnly, statusAt } from "./lib/flow";
+import { telemetry } from "./lib/telemetry";
 import { formatClock, formatCount } from "./lib/format";
 import type { Box } from "./lib/geometry";
 import { frameAtTime, frameNumber, frameStartTimes, frameTime } from "./lib/timing";
@@ -131,6 +132,7 @@ export default function App() {
 
   const track = async () => {
     if (!video) return;
+    if (playing) stop();                                    // AC-17.3
     const answer = await api.startTracking(video.id);
     if (!answer.ok) { setNotice(answer.problems[0]); return; }
     known.current = { revision: -1, upto: 0 };
@@ -183,6 +185,9 @@ export default function App() {
   const result = results.current[index];
   const trackedBox = Array.isArray(result) ? toBox(result) : null;
   const status = tracking ? statusAt(tracking.segments, index) : "not_tracked";
+  const shownStatus = displayStatus(status, index, tracking?.run ?? null) as Shown;
+  const tele = telemetry(result ?? null, index > 0 ? results.current[index - 1] ?? null : null, tracking?.zone ?? null);
+  const playable = canPlay(runState);
   const targetBox = tracking?.target && tracking.target.frame === index ? toBox(tracking.target.box) : null;
   const zone = tracking?.zone ? toBox(tracking.zone) : null;
   const steps = canStep(pending ?? index, playing ? 0 : count);
@@ -211,7 +216,8 @@ export default function App() {
           <div className="panel flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2">
             <div className="flex items-center gap-1">
               <button className="btn" data-testid="step-back" disabled={!steps.back} onClick={() => step(-1)}>Step back</button>
-              <button className="btn w-16" data-testid="play" disabled={!video} onClick={() => (playing ? stop() : void play())}>{playing ? "Pause" : "Play"}</button>
+              <button className="btn w-16" data-testid="play" disabled={!video || (!playing && !playable)}
+                      title={playable ? undefined : "Play is available when tracking has finished"} onClick={() => (playing ? stop() : void play())}>{playing ? "Pause" : "Play"}</button>
               <button className="btn" data-testid="step-forward" disabled={!steps.forward} onClick={() => step(1)}>Step forward</button>
             </div>
             <p className="readout" data-testid="position" data-index={video ? index : ""}>
@@ -232,7 +238,8 @@ export default function App() {
         </div>
 
         <aside className="flex flex-col gap-3">
-          <StatusPanel status={status} run={tracking?.run ?? null} zone={tracking?.zone ?? null} videoLoaded={video !== null} />
+          <StatusPanel status={shownStatus} run={tracking?.run ?? null} zone={tracking?.zone ?? null} videoLoaded={video !== null} />
+          <TelemetryPanel t={tele} zoneExists={Boolean(tracking?.zone)} />
           <AnalyticsPanel analytics={tracking?.analytics ?? null} />
           <MetadataPanel video={video} />
         </aside>

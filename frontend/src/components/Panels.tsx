@@ -1,10 +1,12 @@
 import type { Analytics, Message, Run, Video } from "../api";
-import { type Segment, type Status, markerPosition } from "../lib/flow";
+import { type Segment, type Status, markerPosition, periodNumbers, tickLabel, timeTicks } from "../lib/flow";
+import { formatChange, formatMargin, type Telemetry } from "../lib/telemetry";
 import { formatClock, formatCount, formatFps, formatSeconds } from "../lib/format";
 import { frameNumber } from "../lib/timing";
 
-export const STATUS_TEXT: Record<Status, string> = { locked: "LOCKED", unlocked: "UNLOCKED", lost: "LOST", not_tracked: "Not tracked" };
-export const STATUS_COLOR: Record<Status, string> = { locked: "#46B978", unlocked: "#E3A53A", lost: "#E5534B", not_tracked: "#5E666F" };
+export type Shown = Status | "not_tracked_yet";
+export const STATUS_TEXT: Record<Shown, string> = { locked: "LOCKED", unlocked: "UNLOCKED", lost: "LOST", not_tracked: "Not tracked", not_tracked_yet: "Not tracked yet" };
+export const STATUS_COLOR: Record<Shown, string> = { locked: "#46B978", unlocked: "#E3A53A", lost: "#E5534B", not_tracked: "#5E666F", not_tracked_yet: "#8C949E" };
 
 export function Messages({ problems, warnings }: { problems: Message[]; warnings: Message[] }) {
   if (problems.length === 0 && warnings.length === 0) return null;
@@ -25,7 +27,7 @@ export function Messages({ problems, warnings }: { problems: Message[]; warnings
   );
 }
 
-export function StatusPanel({ status, run, zone, videoLoaded }: { status: Status; run: Run | null; zone: [number, number, number, number] | null; videoLoaded: boolean }) {
+export function StatusPanel({ status, run, zone, videoLoaded }: { status: Shown; run: Run | null; zone: [number, number, number, number] | null; videoLoaded: boolean }) {
   const percent = run && run.total_frames > 0 && run.current_frame !== null ? Math.round(((run.current_frame + 1) / run.total_frames) * 100) : 0;
   const runText: Record<Run["state"], string> = {
     idle: "Not started", running: "Tracking", completed: "Tracking finished", lost: "Target lost, waiting for a new box", stopped: "Stopped at a damaged frame",
@@ -61,6 +63,25 @@ export function StatusPanel({ status, run, zone, videoLoaded }: { status: Status
       {run?.lost_message && (
         <p className="border-t border-graphite-600 px-3 py-2" style={{ color: STATUS_COLOR.lost }} data-testid="lost-message">{run.lost_message}</p>
       )}
+    </section>
+  );
+}
+
+export function TelemetryPanel({ t, zoneExists }: { t: Telemetry | null; zoneExists: boolean }) {
+  const near = t?.change != null && Math.abs(t.change) > 0.4;          // within 10 points of the 50 % loss limit
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Target telemetry, this frame</h2>
+      <dl className="py-1">
+        <div className="row"><dt>Box centre</dt><dd data-testid="tele-centre">{t ? `${formatCount(t.cx)}, ${formatCount(t.cy)}` : "—"}</dd></div>
+        <div className="row"><dt>Box size</dt><dd data-testid="tele-size">{t ? `${formatCount(t.w)} × ${formatCount(t.h)}` : "—"}</dd></div>
+        <div className="row"><dt>Box area</dt><dd data-testid="tele-area">{t ? `${formatCount(t.area)} px²` : "—"}</dd></div>
+        <div className="row"><dt title="Tracking is lost when this goes beyond ±50 %">Area change <span className="text-graphite-500">(limit ±50 %)</span></dt>
+          <dd data-testid="tele-change" style={{ color: near ? STATUS_COLOR.unlocked : undefined }}>{t ? formatChange(t.change) : "—"}</dd></div>
+        <div className="row"><dt title="Smallest distance from the box to a zone edge">Lock-zone margin</dt>
+          <dd data-testid="tele-margin" style={{ color: t?.margin != null ? (t.margin >= 0 ? STATUS_COLOR.locked : STATUS_COLOR.unlocked) : undefined }}>
+            {!zoneExists ? formatMargin(null, false) : t ? formatMargin(t.margin, true) : "—"}</dd></div>
+      </dl>
     </section>
   );
 }
@@ -123,28 +144,45 @@ export function MetadataPanel({ video }: { video: Video | null }) {
 
 export function Timeline({ segments, frameCount, index, duration }: { segments: Segment[]; frameCount: number; index: number; duration: number }) {
   const shown: Segment[] = segments.length > 0 ? segments : frameCount > 0 ? [["not_tracked", 0, frameCount - 1]] : [];
+  const numbers = periodNumbers(shown);
+  const ticks = timeTicks(duration);
   return (
-    <div data-testid="timeline">
-      <div className="relative h-6 border border-graphite-600 bg-graphite-950">
-        <div className="flex h-full">
-          {shown.map(([status, start, end]) => (
-            <div key={start} data-testid="timeline-segment" data-status={status} data-start={start} data-end={end}
-                 title={`${STATUS_TEXT[status as Status]}: frames ${formatCount(frameNumber(start))} to ${formatCount(frameNumber(end))}`}
-                 style={{ width: `${((end - start + 1) / frameCount) * 100}%`, background: STATUS_COLOR[status as Status], opacity: status === "not_tracked" ? 0.35 : 1 }} />
-          ))}
-        </div>
-        {frameCount > 0 && (
-          <div data-testid="timeline-marker" className="absolute -top-1 -bottom-1 w-px bg-white" style={{ left: `${markerPosition(index, frameCount) * 100}%` }} />
-        )}
-      </div>
-      <div className="mt-1 flex justify-between text-graphite-400 readout text-[11px]">
-        <span>{formatClock(0)}</span>
-        <span className="flex gap-3 font-sans">
+    <div data-testid="timeline" className="panel px-3 pt-2 pb-1">
+      <div className="mb-1 flex items-center justify-between text-graphite-400">
+        <span>Timeline</span>
+        <span className="flex gap-3 text-[11px]">
           {(["locked", "unlocked", "lost"] as Status[]).map((s) => (
             <span key={s} className="flex items-center gap-1"><i className="inline-block h-2 w-2" style={{ background: STATUS_COLOR[s] }} />{STATUS_TEXT[s].toLowerCase()}</span>
           ))}
         </span>
-        <span>{formatClock(duration)}</span>
+      </div>
+      <div className="relative h-8 border border-graphite-600 bg-graphite-950">
+        <div className="flex h-full">
+          {shown.map(([status, start, end]) => (
+            <div key={start} data-testid="timeline-segment" data-status={status} data-start={start} data-end={end}
+                 className="relative flex items-center justify-center overflow-hidden"
+                 title={`${STATUS_TEXT[status as Status]}: frames ${formatCount(frameNumber(start))} to ${formatCount(frameNumber(end))}`}
+                 style={{ width: `${((end - start + 1) / frameCount) * 100}%`, background: STATUS_COLOR[status as Status], opacity: status === "not_tracked" ? 0.35 : 1 }}>
+              {numbers.has(start) && (
+                <span data-testid="period-number" className="readout text-[11px] font-bold text-graphite-950">{numbers.get(start)}</span>
+              )}
+            </div>
+          ))}
+        </div>
+        {frameCount > 0 && (
+          <div data-testid="timeline-marker" className="absolute -top-1 -bottom-1 w-0.5 bg-white" style={{ left: `${markerPosition(index, frameCount) * 100}%` }} />
+        )}
+      </div>
+      <div className="relative h-6" aria-hidden="true">
+        {ticks.times.map((t, k) => {
+          const last = k === ticks.times.length - 1 && t >= duration - 1e-9;
+          return (
+            <div key={t} className="absolute top-0 flex flex-col items-center" style={{ left: `${(t / duration) * 100}%`, transform: k === 0 ? "none" : last ? "translateX(-100%)" : "translateX(-50%)", alignItems: k === 0 ? "flex-start" : last ? "flex-end" : "center" }}>
+              <span className="h-1.5 w-px bg-graphite-500" />
+              <span data-testid="timeline-tick" className="readout whitespace-nowrap text-[11px] text-graphite-400">{tickLabel(t, ticks.step, duration)}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
