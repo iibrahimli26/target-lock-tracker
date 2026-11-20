@@ -119,3 +119,18 @@ def rotation(degrees: int | None) -> Message:
 def variable_frame_rate() -> Message:
     return Message("variable_frame_rate", "This video has a variable frame rate. The frame rate shown is an average, "
                                           "and times are approximate.")
+
+
+def bad_request() -> Message:
+    return Message("bad_request", "The request could not be understood. Check the values that were sent.")
+
+
+def frame_out_of_range(index: int, frame_count: int) -> Message:
+    # Frames are numbered from 1 for people (OQ-16); the API counts from 0.
+    return Message("frame_out_of_range", f"Frame {num(index + 1)} does not exist: this video has frames 1 to {num(frame_count)}.",
+                   found=f"frame {num(index + 1)}", allowed=f"frames 1 to {num(frame_count)}")
+
+
+def frame_unreadable(index: int) -> Message:
+    return Message("frame_unreadable", f"The file is damaged: frame {num(index + 1)} cannot be read.",
+                   found=f"frame {num(index + 1)}")
