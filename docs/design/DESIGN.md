@@ -10,6 +10,7 @@ Central index of requirement analysis output for this repository. Individual ses
 |---|---|---|---|
 | (this file) | Core — Feature 1: Video Upload and Validation, including metadata and frame-by-frame navigation (OQ-1) | — | Active |
 | [DESIGN_e64c4e2.md](./DESIGN_e64c4e2.md) | Features 2 to 6: target selection, tracking, lock zone, loss and recovery, analytics and timeline (US-7 to US-15, OQ-20 to OQ-35) | e64c4e2 | Active |
+| [DESIGN_c072f79.md](./DESIGN_c072f79.md) | Console improvements: telemetry, Play waits for tracking, timeline scale (US-16 to US-18, OQ-36 to OQ-39) | c072f79 | Active |
 
 ## User Stories
 

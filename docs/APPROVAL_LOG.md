@@ -127,6 +127,21 @@
 - **Approved By**: <!-- leave blank until a human operator approves -->
 - **Approval Date**: <!-- leave blank until approved -->
 
+### Entry 6 — Requirement Analysis and Solution Architecture — Console improvements
+
+- **Status**: Pending Approval
+- **Stage**: Requirement Analysis + Solution Architecture
+- **Session Started**: 2026-11-20
+- **Related Doc(s)**: docs/design/DESIGN_c072f79.md (US-16 to US-18, OQ-36 to OQ-39); docs/architecture/ARCHITECTURE_c072f79.md (AQ-18, AQ-19)
+- **Requested By**: Human operator, in chat on 2026-11-20, choosing three improvements: live target telemetry panel, Play waits for tracking to finish, clearer timeline with ticks
+- **Decisions / Scope Covered**:
+  - The operator chose the three features; the agent wrote both stages in one entry because the deadline is 21 November.
+  - All Open Questions (OQ-36 to OQ-39, AQ-18, AQ-19) were decided by the agent.
+- **Open Questions Resolved This Session**:
+  - OQ-36 to OQ-39, AQ-18, AQ-19 — decided by the agent.
+- **Approved By**: <!-- leave blank until a human operator approves -->
+- **Approval Date**: <!-- leave blank until approved -->
+
 ---
 
 ## History
