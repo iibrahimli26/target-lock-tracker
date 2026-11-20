@@ -68,6 +68,19 @@ def scripted_url(tmp_path_factory):
 
 
 @pytest.fixture
+def slow_url(tmp_path_factory):
+    """A stand-in tracker that takes 40 ms per frame of REF-A and never loses the target."""
+    sys.path.insert(0, str(ROOT / "backend" / "tests"))
+    from app.geometry import Box
+    from helpers import ScriptedTracker
+    script = lambda i: Box(100 + 8 * i, 292, 96, 66)
+    server, thread, url = _serve(tmp_path_factory, lambda: ScriptedTracker(script, delay=0.04))
+    yield url
+    server.should_exit = True
+    thread.join(timeout=10)
+
+
+@pytest.fixture
 def new_page(browser):
     opened = []
 

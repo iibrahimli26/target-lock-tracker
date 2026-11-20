@@ -261,3 +261,57 @@ def test_loss_is_shown_and_tracking_resumes_from_a_new_box(scripted_url, new_pag
     assert segments == [("unlocked", 0, 39), ("lost", 40, 44), ("unlocked", 45, 89)]    # frames 41-45 stay LOST
     expect(text(page, "total-lost")).to_contain_text("(5 fr)")
     assert page.get_by_test_id("lost-message").count() == 0
+
+
+def test_ac_16_telemetry_of_the_frame_shown(scripted_url, new_page):                      # AC-16.1, AC-16.3, AC-16.5
+    page = new_page(scripted_url)                       # stand-in tracker: box (100 + 8i, 292, 96, 66), lost on frame 41
+    load_ref_a(page)
+    expect(text(page, "tele-centre")).to_have_text("—")
+    drag_on_picture(page, (100, 292), (196, 358))
+    text(page, "track").click()
+    expect(text(page, "run-state")).to_have_attribute("data-state", "lost")
+    expect(text(page, "tele-centre")).to_have_text("—")                                 # frame 41 is LOST: no box
+    text(page, "slider").fill("10")
+    expect(text(page, "frame-number")).to_have_text("11")
+    expect(text(page, "tele-centre")).to_have_text("228, 325")
+    expect(text(page, "tele-size")).to_have_text("96 × 66")
+    expect(text(page, "tele-area")).to_have_text("6,336 px²")
+    expect(text(page, "tele-change")).to_have_text("0.0 %")
+    expect(text(page, "tele-margin")).to_have_text("No lock zone")
+    text(page, "slider").fill("0")
+    expect(text(page, "tele-change")).to_have_text("—")                                 # first frame of the run
+    text(page, "tool-zone").click()
+    drag_on_picture(page, (50, 250), (450, 450))                                        # zone x 50..450, y 250..450
+    expect(text(page, "tele-margin")).to_have_text("42 px inside")                      # top: 292 - 250 = 42 is the smallest
+
+
+def test_ac_17_play_waits_for_tracking_and_unreached_frames_say_so(slow_url, new_page):   # AC-17.1, AC-17.2
+    page = new_page(slow_url)
+    load_ref_a(page)
+    expect(text(page, "play")).to_be_enabled()
+    drag_on_picture(page, (100, 292), (196, 358))
+    text(page, "track").click()
+    expect(text(page, "run-state")).to_have_attribute("data-state", "running")
+    expect(text(page, "play")).to_be_disabled()
+    expect(text(page, "play")).to_have_attribute("title", re.compile("tracking"))
+    text(page, "slider").fill("85")
+    expect(text(page, "status")).to_have_text("Not tracked yet")
+    expect(text(page, "run-state")).to_have_attribute("data-state", "completed", timeout=30_000)
+    expect(text(page, "play")).to_be_enabled()
+    expect(text(page, "status")).to_have_text("UNLOCKED")                               # the frame now has a result
+
+
+def test_ac_18_timeline_has_a_time_scale_and_numbered_periods(scripted_url, new_page):    # AC-18.1, AC-18.2
+    page = new_page(scripted_url)
+    load_ref_a(page)                                                                    # 3.0 s: marks every 0.5 s
+    labels = [t.inner_text() for t in page.get_by_test_id("timeline-tick").all()]
+    assert labels == ["0.0 s", "0.5 s", "1.0 s", "1.5 s", "2.0 s", "2.5 s", "3.0 s"]
+    text(page, "tool-zone").click()
+    drag_on_picture(page, (100, 250), (500, 420))                                       # box (100 + 8i, ...) inside while i <= 38
+    text(page, "tool-target").click()
+    drag_on_picture(page, (100, 292), (196, 358))
+    text(page, "track").click()
+    expect(text(page, "run-state")).to_have_attribute("data-state", "lost")
+    expect(page.get_by_test_id("period-number")).to_have_count(1)
+    expect(page.get_by_test_id("period-number")).to_have_text("1")
+    expect(text(page, "lock-periods")).to_have_text("1")
