@@ -25,8 +25,8 @@ This runs the three test suites and prints one result line for each:
 | Suite | What it covers | Size |
 |---|---|---|
 | Backend (pytest) | Upload rules, frame access, lock logic, tracking, loss and resume | 246 tests |
-| Page logic (Vitest) | Number formats, time-to-frame mapping, box drawing, step and upload decisions | 68 tests |
-| Browser (Playwright, Chromium) | The console driven end to end against the real application | 14 tests |
+| Page logic (Vitest) | Number formats, time-to-frame mapping, box drawing, telemetry, timeline scale, step and upload decisions | 108 tests |
+| Browser (Playwright, Chromium) | The console driven end to end against the real application | 17 tests |
 
 The browser suite downloads Chromium on first use; without it those tests are skipped with a message. `python run.py test --slow` adds three tests that write real 1 GB files to a temporary folder.
 
@@ -36,8 +36,8 @@ The browser suite downloads Chromium on first use; without it those tests are sk
 2. **Look around.** Step one frame at a time, drag the slider, or play. When stopped, the picture is the exact frame the tracker sees.
 3. **Draw the target box** around the target on the frame shown. Drag inside the box to move it, or a corner to resize it.
 4. **Draw the lock zone** after choosing "Lock zone".
-5. **Start tracking.** Progress and processing speed are shown while it runs.
-6. **Read the result.** The timeline under the picture shows locked (green), unlocked (amber) and lost (red) stretches; the panels on the right give the totals, each lock period, and the status of the frame on screen.
+5. **Start tracking.** Progress and processing speed are shown while it runs. Play is available again when tracking has finished.
+6. **Read the result.** The timeline under the picture shows locked (green), unlocked (amber) and lost (red) stretches with a time scale and numbered lock periods; the panels on the right give the status and target telemetry of the frame on screen (box position, size, area change, margin to the zone), the totals, and each lock period.
 7. **If tracking is lost,** the page goes to that frame. Draw a new box there, or on a later frame, and resume.
 
 ## What a video must be

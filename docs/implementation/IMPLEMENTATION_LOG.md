@@ -4,11 +4,32 @@ Append one entry per implementation pass (one story per pass), **most recent fir
 
 > **Read this first.** All passes below were made on 2026-11-20 after the operator instructed the agent to continue and finish the project (quoted in `docs/APPROVAL_LOG.md`). **Approval basis for every pass: none signed.** The requirement and architecture entries were unsigned when the code was written. Implementation questions (`IQ-`) were decided by the agent and are marked so. Pull requests could not be opened from the agent's environment; every branch was merged into `main` locally with a merge commit instead of a squash-merged pull request. Each pass names its test commit (red) and its code commit (green) so the order can be checked in the Git history.
 
-**Final state:** `python run.py test` → 246 backend tests (pytest), 68 page-logic tests (Vitest), 14 browser tests (Playwright, Chromium) pass on the agent's Linux machine. 3 further backend tests with real 1 GB files are opt-in (`--slow`) and passed when run once.
+**Final state:** `python run.py test` → 246 backend tests (pytest), 108 page-logic tests (Vitest), 17 browser tests (Playwright, Chromium) pass on the agent's Linux machine. 3 further backend tests with real 1 GB files are opt-in (`--slow`) and passed when run once.
 
 **Scenarios without an end-to-end automated test** (their logic is tested, the on-screen behaviour was not driven by a test): AC-1.4 (cancelling the file chooser), AC-6.9e (dragging the slider fast; the newest-request rule behind it is tested and rapid stepping is driven in the browser), AC-7.4 (moving and resizing a box with the mouse; the geometry is tested), AC-9.3 beyond presence of the numbers, AC-15.2 for the amber colour (green and red are asserted).
 
 ---
+
+## Pass: 2026-11-20 — US-16 to US-18 Console improvements
+
+**Branch:** `feature/console-improvements` · **Red (logic):** `9fd4693` (telemetry tests fail to load; 24 timeline and Play tests fail) · **Red (browser):** `9baf92f` (3 failed) · **Green:** `5194197`
+**Traces to:** DESIGN_c072f79.md US-16 to US-18; ARCHITECTURE_c072f79.md.
+**Chosen by:** the operator, from a list of six proposed improvements, after testing the console with a real clip.
+**Deviation:** three stories in one pass, because they share the same panels and the deadline is 21 November.
+
+| Scenario | Status | Test |
+|---|---|---|
+| AC-16.1 to AC-16.5 telemetry values and formats | ✅ | `frontend/src/lib/telemetry.test.ts`; `test_ac_16_telemetry_of_the_frame_shown` |
+| AC-17.1, AC-17.2 Play waits; "Not tracked yet" | ✅ | `frontend/src/lib/timeline.test.ts`; `test_ac_17_play_waits_for_tracking_and_unreached_frames_say_so` |
+| AC-17.3 starting tracking stops playback | ⚠️ implemented, no automated test | — |
+| AC-18.1, AC-18.2 time marks; numbered periods | ✅ | `frontend/src/lib/timeline.test.ts`; `test_ac_18_timeline_has_a_time_scale_and_numbered_periods` |
+
+**Final state after this pass:** 246 backend, 108 page-logic and 17 browser tests pass.
+
+| ID | Question | Status | Resolution |
+|---|---|---|---|
+| IQ-15 | Should a lock period too narrow for its number still be labelled? | Resolved | Decided by the agent: no; the number is hidden by the segment's width, and hovering shows the frames. |
+| IQ-16 | When is the area change highlighted? | Resolved | Decided by the agent: in amber beyond ±40 %, i.e. within 10 points of the 50 % loss limit. |
 
 ## Pass: 2026-11-20 — Fix: no notice when the lock zone is missing (found by the operator with a real clip)
 
