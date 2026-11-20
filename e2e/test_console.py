@@ -1,6 +1,7 @@
 """The operator's console in a real browser. Frame numbers on screen count from 1."""
 import re
 
+import pytest
 from playwright.sync_api import expect
 
 from conftest import drag_on_picture, shown_frame, upload
@@ -195,18 +196,41 @@ def test_draw_target_and_zone_track_and_read_the_result(app_url, new_page):     
     page.screenshot(path=str(__import__("pathlib").Path(__file__).parent / "artifacts" / "console.png"))
 
 
-def test_playback_draws_over_the_player_and_stops_on_an_exact_frame(app_url, new_page):  # AC-9.2, AC-9.4
-    page = new_page(app_url)
+# On some machines (seen on Windows) the player's clock, currentTime, lags the frame
+# the browser has just put on screen. This script makes it lag by 40 ms, a bit more than
+# one frame at 30 fps, so the test sees what such a machine sees.
+LAGGING_CLOCK = """
+(() => {
+  const real = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "currentTime");
+  Object.defineProperty(HTMLMediaElement.prototype, "currentTime", {
+    configurable: true,
+    get() { return Math.max(0, real.get.call(this) - 0.04); },
+    set(value) { real.set.call(this, value); },
+  });
+})();
+"""
+
+
+@pytest.mark.parametrize("clock", ["exact", "lagging"])
+def test_playback_draws_over_the_player_and_stops_on_an_exact_frame(app_url, new_page, clock):  # AC-9.2, AC-9.4
+    page = new_page(app_url, init_script=LAGGING_CLOCK if clock == "lagging" else None)
     load_ref_a(page)
     text(page, "play").click()
     expect(text(page, "play")).to_have_text("Pause")
     expect(text(page, "frame-image")).to_have_count(0)                                  # the player is showing, not a still
     expect(text(page, "frame-number")).not_to_have_text("1", timeout=10_000)            # the position follows the player
-    text(page, "play").click()
+    page.wait_for_timeout(500)
+    # Press Pause and, in the same instant, read the frame number the operator was looking at.
+    seen = int(page.evaluate("""() => {
+        document.querySelector('[data-testid="play"]').click();
+        return document.querySelector('[data-testid="frame-number"]').textContent; }"""))
     expect(text(page, "play")).to_have_text("Play")
     expect(text(page, "frame-image")).to_be_visible()
-    number = int(text(page, "frame-number").inner_text())
-    assert number > 1 and shown_frame(page) == number - 1                               # the still is exactly that frame
+    expect(text(page, "slider")).to_have_value(str(seen - 1))
+    for _ in range(3):                      # nothing may move the position after Pause
+        page.wait_for_timeout(300)
+        assert int(text(page, "frame-number").inner_text()) == seen                     # Pause keeps the frame on screen
+        assert shown_frame(page) == seen - 1                                            # and the still is exactly that frame
 
 
 def test_loss_is_shown_and_tracking_resumes_from_a_new_box(scripted_url, new_page):      # AC-12.1, AC-12.5, AC-13.1

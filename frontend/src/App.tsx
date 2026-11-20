@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { type FrameResult, type Message, type Tracking, type Video, api } from "./api";
 import { AnalyticsPanel, Messages, MetadataPanel, StatusPanel, Timeline } from "./components/Panels";
 import { Stage, type Tool } from "./components/Stage";
@@ -30,6 +30,7 @@ export default function App() {
   const frames = useRef(latestOnly());
   const uploads = useRef(latestOnly());
   const jumpedFor = useRef(-1);
+  const playingNow = useRef(false);
 
   const meta = video?.metadata ?? null;
   const count = meta?.frame_count ?? 0;
@@ -76,6 +77,7 @@ export default function App() {
 
   const load = useCallback((v: Video) => {
     player.current?.pause();
+    playingNow.current = false;
     setPlaying(false);
     current.current = { id: v.id, index: 0, pending: null };
     results.current = new Array(v.metadata.frame_count).fill(null);
@@ -136,19 +138,26 @@ export default function App() {
   };
 
   // --- playback ---------------------------------------------------------------
+  // The frame number as it is painted on screen right now (updated when React commits).
+  const painted = useRef(0);
+  useLayoutEffect(() => { painted.current = index; }, [index]);
+
+  // Pause keeps exactly the frame whose number the operator is looking at. It comes from the
+  // browser's per-frame notices, not from the player's clock, which can lag on some machines.
   const stop = useCallback(() => {
     const element = player.current;
     if (!element || !video) return;
+    playingNow.current = false;                    // ignore any per-frame notice that arrives after this
     element.pause();
     setPlaying(false);
-    void showFrame(video.id, Math.min(frameAtTime(times, element.currentTime), count - 1));
-  }, [video, times, count, showFrame]);
+    void showFrame(video.id, Math.min(painted.current, count - 1));
+  }, [video, count, showFrame]);
 
   const play = async () => {
     const element = player.current;
     if (!element || !video) return;
     element.currentTime = (times[index] ?? 0) + 0.001;
-    try { await element.play(); setPlaying(true); } catch { setPlaying(false); }
+    try { await element.play(); playingNow.current = true; setPlaying(true); } catch { setPlaying(false); }
   };
 
   useEffect(() => {
@@ -156,7 +165,7 @@ export default function App() {
     if (!playing || !element) return;
     let alive = true;
     const onFrame = (mediaTime: number) => {
-      if (!alive) return;
+      if (!alive || !playingNow.current) return;
       const now = frameAtTime(times, mediaTime);
       if (now !== current.current.index) { current.current.index = now; setIndex(now); }
       schedule();
