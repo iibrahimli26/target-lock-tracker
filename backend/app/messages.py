@@ -146,3 +146,7 @@ def box_outside_picture(box, width: int, height: int) -> Message:
     allowed = f"inside the {width} × {height} picture"
     return Message("box_outside_picture", f"The box must lie inside the picture: found {found}, allowed {allowed}.",
                    found=found, allowed=allowed)
+
+
+def no_target() -> Message:
+    return Message("no_target", "Select a target first: draw a box around it on the picture, then start tracking.")

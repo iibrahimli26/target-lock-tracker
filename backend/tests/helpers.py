@@ -46,3 +46,39 @@ def marker(jpeg: bytes, x0: int = 108, row: int = 325):
 def vfr_source_frame(k: int) -> int:
     """REF-V keeps source frames 0, 2, 3, 5, 6, 8, ... (those with n mod 3 != 1)."""
     return 3 * (k // 2) + (0 if k % 2 == 0 else 2)
+
+
+def marker_of_picture(picture, x0: int = 108, row: int = 325):
+    """Like marker(), for a decoded picture (what the tracker is given)."""
+    import numpy as np
+    bright = np.where(picture[row, :, 1] > 128)[0]
+    return None if len(bright) == 0 else round((int(bright[0]) - x0) / 8)
+
+
+class ScriptedTracker:
+    """Stands in for the OpenCV tracker (the one true external dependency, AQ-16).
+    For each frame of REF-A it returns whatever `script(frame_index)` says:
+    a Box, or None for "the tracker reports failure". It finds the frame index
+    from the picture's marker, so the script is written in absolute frame indexes."""
+    def __init__(self, script, delay: float = 0.0):
+        self.script, self.delay = script, delay
+
+    def init(self, picture, box):
+        pass
+
+    def update(self, picture):
+        import time
+        if self.delay:
+            time.sleep(self.delay)
+        return self.script(marker_of_picture(picture))
+
+
+def wait_for_tracking(client, base, timeout: float = 120.0) -> dict:
+    import time
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = client.get(f"{base}/tracking").json()
+        if state["run"]["state"] != "running":
+            return state
+        time.sleep(0.02)
+    raise AssertionError("tracking did not finish in time")
