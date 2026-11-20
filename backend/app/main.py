@@ -2,9 +2,11 @@
 from urllib.parse import unquote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from . import messages as msg
+from .frames import FrameReader, FrameUnreadable
 from .settings import Settings
 from .store import VideoStore
 from .uploads import Uploads, refused
@@ -24,6 +26,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(Exception)
     async def unexpected(request: Request, exc: Exception):      # AC-5.3: never leak internals
         return answer(refused(500, [msg.internal_error()]))
+
+    @app.exception_handler(RequestValidationError)
+    async def not_understood(request: Request, exc: RequestValidationError):
+        return answer(refused(422, [msg.bad_request()]))
+
+    def frames_of(video) -> FrameReader:
+        if "frames" not in video.resources:
+            video.resources["frames"] = FrameReader(video.path, video.metadata["frame_count"])
+        return video.resources["frames"]
 
     @app.post("/api/upload")
     async def upload(request: Request):
@@ -45,5 +56,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if video is None:
             return answer(refused(404, [msg.no_video()]))
         return FileResponse(video.path, media_type="video/mp4")
+
+    @app.get("/api/video/{video_id}/frames/{index}")
+    def frame(video_id: str, index: int):
+        """The picture of one frame, counted from 0, as a JPEG."""
+        video = store.get(video_id)
+        if video is None:
+            return answer(refused(404, [msg.no_video()]))
+        frame_count = video.metadata["frame_count"]
+        if not 0 <= index < frame_count:
+            return answer(refused(404, [msg.frame_out_of_range(index, frame_count)]))
+        try:
+            jpeg = frames_of(video).jpeg(index)
+        except FrameUnreadable:                                 # OQ-8: the damage shows only now
+            return answer(refused(422, [msg.frame_unreadable(index)]))
+        return Response(content=jpeg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
     return app
