@@ -71,9 +71,11 @@ def scripted_url(tmp_path_factory):
 def new_page(browser):
     opened = []
 
-    def open_page(url: str, locale: str = "en-US"):
+    def open_page(url: str, locale: str = "en-US", init_script: str | None = None):
         context = browser.new_context(locale=locale, viewport={"width": 1440, "height": 900})
         page = context.new_page()
+        if init_script:
+            page.add_init_script(init_script)
         page.set_default_timeout(15_000)
         page.goto(url)
         opened.append(context)
