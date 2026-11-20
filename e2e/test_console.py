@@ -170,8 +170,12 @@ def test_draw_target_and_zone_track_and_read_the_result(app_url, new_page):     
     stored = page.evaluate("async id => (await (await fetch(`/api/video/${id}/tracking`)).json())", state)
     assert stored["target"]["frame"] == 0
     assert [round(v) for v in stored["target"]["box"]] == [100, 292, 96, 66]            # picture pixels, not screen pixels
+    expect(text(page, "zone-state")).to_have_attribute("data-zone", "none")             # no zone yet: say so
+    expect(text(page, "zone-state")).to_contain_text("No lock zone")
     text(page, "tool-zone").click()
     drag_on_picture(page, (300, 200), (700, 500))
+    expect(text(page, "zone-state")).to_have_attribute("data-zone", "drawn")
+    expect(text(page, "zone-state")).to_contain_text("400 × 300")
     text(page, "track").click()
     expect(text(page, "run-state")).to_have_attribute("data-state", "completed", timeout=60_000)
     expect(text(page, "run-progress")).to_contain_text("90 / 90")
@@ -241,6 +245,7 @@ def test_loss_is_shown_and_tracking_resumes_from_a_new_box(scripted_url, new_pag
     expect(text(page, "run-state")).to_have_attribute("data-state", "lost")
     expect(text(page, "lost-message")).to_contain_text("frame 41")
     expect(text(page, "lost-message")).to_contain_text("tracker reported failure")
+    expect(text(page, "zone-state")).to_have_attribute("data-zone", "none")             # tracked without a zone: still said
     expect(text(page, "frame-number")).to_have_text("41")                               # the page went to the frame of the loss
     expect(text(page, "status")).to_have_text("LOST")
     expect(text(page, "status")).to_have_css("color", "rgb(229, 83, 75)")               # red
