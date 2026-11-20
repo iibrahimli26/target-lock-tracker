@@ -99,12 +99,13 @@ def test_ac_3_3b_over_limit_is_caught_while_reading_when_no_size_is_declared(sma
 
 @pytest.mark.slow
 @pytest.mark.parametrize("delta,status", [(-1, 201), (0, 201), (1, 413)])
-def test_ac_3_3_real_one_gib_files(client, tmp_path, delta, status):
-    """Opt-in (pytest -m slow): uploads real files of about 1 GB, created here and never committed."""
+def test_ac_3_3_real_one_gib_files(client, delta, status):
+    """Opt-in (pytest -m slow): streams real files of about 1 GB through the upload
+    receiver. They are created here, written to the temporary data folder and never committed."""
     total = GIB + delta
     base = fx("ref_720p.mp4")
 
-    def body():
+    async def chunks():
         yield base
         yield struct.pack(">I4s", total - len(base), b"free")
         left = total - len(base) - 8
@@ -113,8 +114,11 @@ def test_ac_3_3_real_one_gib_files(client, tmp_path, delta, status):
             yield block[:left]
             left -= len(block)
 
-    r = client.post("/api/upload", content=body(), headers={"X-File-Name": "big.mp4", "Content-Length": str(total)})
-    assert r.status_code == status
+    for declared in (total, None):          # with and without a declared size
+        result_status, body = asyncio.run(client.app.state.uploads.receive(chunks(), "big.mp4", declared))
+        assert result_status == status, body
+        if status == 201:
+            assert body["video"]["size"] == total
 
 
 # --- AC-3.4: no maximum duration; at least 2 frames (OQ-3) ------------------

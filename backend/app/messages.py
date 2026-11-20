@@ -73,3 +73,38 @@ def colour_format(bit_depth: int, chroma: str) -> Message:
     found, allowed = f"{bit_depth}-bit colour, {chroma}", "8-bit colour, 4:2:0"
     return Message("colour_format", f"The video's colour format is not supported: found {found}, allowed {allowed}.",
                    found=found, allowed=allowed)
+
+
+def empty_file() -> Message:
+    return Message("empty_file", f"The file is empty: found 0 bytes, allowed {ALLOWED_FILE}.",
+                   found="0 bytes", allowed=ALLOWED_FILE)
+
+
+def too_large(found_bytes: int | None, limit: int) -> Message:
+    found = f"{num(found_bytes)} bytes" if found_bytes is not None else f"more than {num(limit)} bytes"
+    allowed = f"{num(limit)} bytes" + (" (1 GB)" if limit == 1024 ** 3 else "")
+    return Message("too_large", f"The file is larger than the maximum allowed size: found {found}, allowed {allowed}.",
+                   found=found, allowed=allowed)
+
+
+def fragmented() -> Message:
+    return Message("fragmented", "This MP4 uses a fragmented (streaming) layout: its frames are not listed in the "
+                                 "main index, so it cannot be used. Save it as a regular MP4 first.",
+                   found="fragmented MP4", allowed="regular MP4")
+
+
+def too_short(frames: int, minimum: int) -> Message:
+    found, allowed = f"{num(frames)} frame" + ("" if frames == 1 else "s"), f"at least {minimum} frames"
+    return Message("too_short", f"The video is too short: found {found}, allowed {allowed}.", found=found, allowed=allowed)
+
+
+def resolution(width: int, height: int, max_pixels: int) -> Message:
+    found, allowed = f"{num(width * height)} pixels ({width} × {height})", f"{num(max_pixels)} pixels"
+    return Message("resolution", f"The resolution is larger than the maximum allowed: found {found}, "
+                                 f"allowed at most {allowed} (for example 1280 × 720).", found=found, allowed=allowed)
+
+
+def orientation(width: int, height: int) -> Message:
+    found, allowed = f"{width} × {height}, portrait", "landscape or square"
+    return Message("orientation", f"Only landscape or square videos are supported: found {found}, allowed {allowed}.",
+                   found=found, allowed=allowed)

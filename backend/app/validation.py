@@ -14,6 +14,13 @@ CODEC_NAMES = {
 }
 
 
+def size_problem(size: int | None, settings: Settings):
+    """OQ-2: a file of exactly the limit is accepted; one byte more is refused."""
+    if size is not None and size <= settings.max_upload_bytes:
+        return None
+    return msg.too_large(size, settings.max_upload_bytes)
+
+
 def validate(path: pathlib.Path, size: int, settings: Settings) -> tuple[dict, list, list]:
     """Returns (metadata, problems, warnings). Any problem means the file is refused."""
     try:
@@ -35,4 +42,12 @@ def validate(path: pathlib.Path, size: int, settings: Settings) -> tuple[dict, l
         problems.append(msg.codec(CODEC_NAMES.get(track.codec, f"'{track.codec.strip()}'")))
     elif (track.bit_depth, track.chroma) != (8, "4:2:0"):   # OQ-6
         problems.append(msg.colour_format(track.bit_depth or 0, track.chroma or "unknown"))
+    if info.fragmented and track.frame_count == 0:          # AQ-5
+        problems.append(msg.fragmented())
+    elif track.frame_count < settings.min_frames:           # OQ-3
+        problems.append(msg.too_short(track.frame_count, settings.min_frames))
+    if track.width * track.height > settings.max_pixels:    # OQ-4, OQ-18
+        problems.append(msg.resolution(track.width, track.height, settings.max_pixels))
+    if track.width < track.height:                          # OQ-4: landscape or square (stored size, AQ-9)
+        problems.append(msg.orientation(track.width, track.height))
     return {}, problems, warnings
