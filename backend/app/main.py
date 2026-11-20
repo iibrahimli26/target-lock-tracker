@@ -21,7 +21,7 @@ class BoxBody(BaseModel):
     frame: int = 0                              # frame index from 0
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, tracker_factory=None) -> FastAPI:
     settings = settings or Settings()
     app = FastAPI(title="Target-Lock Video Tracker")
     store = VideoStore()
@@ -46,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     def session_of(video) -> Session:
         if "session" not in video.resources:
-            video.resources["session"] = Session(video.path, video.metadata, settings)
+            video.resources["session"] = Session(video.path, video.metadata, settings, tracker_factory)
         return video.resources["session"]
 
     def checked_box(video, body: BoxBody):
@@ -121,11 +121,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session.set_zone(box)
         return {"zone": session.snapshot()["zone"]}
 
-    @app.get("/api/video/{video_id}/tracking")
-    def tracking_state(video_id: str):
+    @app.post("/api/video/{video_id}/tracking")
+    def start_tracking(video_id: str):
+        """Start, restart or resume tracking at the frame of the stored target box."""
         video = store.get(video_id)
         if video is None:
             return answer(refused(404, [msg.no_video()]))
-        return session_of(video).snapshot()
+        session = session_of(video)
+        if not session.start():
+            return answer(refused(409, [msg.no_target()]))
+        return JSONResponse(status_code=202, content=session.snapshot(since=session.frame_count))
+
+    @app.get("/api/video/{video_id}/tracking")
+    def tracking_state(video_id: str, since: int = 0, revision: int | None = None):
+        video = store.get(video_id)
+        if video is None:
+            return answer(refused(404, [msg.no_video()]))
+        return session_of(video).snapshot(since, revision)
 
     return app
