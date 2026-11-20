@@ -69,6 +69,9 @@ $FF -f lavfi -i "$SRC" -frames:v 10 -c:v libx265 -pix_fmt yuv420p -tag:v hvc1 -x
 $FF -f lavfi -i "$SRC" -frames:v 10 -c:v libx264 -pix_fmt yuv420p -f 3gp old_phone.3gp
 $FF -f lavfi -i "color=c=$BG:s=176x144:r=25" -frames:v 10 -c:v h263 old_phone_h263.3gp
 
+# fragmented layout: frames are not listed in the main index (AQ-5)
+$FF -f lavfi -i "$SRC" -frames:v 10 -c:v libx264 -pix_fmt yuv420p -movflags frag_keyframe+empty_moov fragmented.mp4
+
 # --- colour formats ---------------------------------------------------------
 $FF -f lavfi -i "$SRC" -frames:v 10 -c:v libx264 -pix_fmt yuvj420p    h264_fullrange.mp4
 $FF -f lavfi -i "$SRC" -frames:v 10 -c:v libx264 -pix_fmt yuv420p10le h264_10bit.mp4
