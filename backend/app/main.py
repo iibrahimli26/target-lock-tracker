@@ -8,13 +8,14 @@ from . import messages as msg
 from .settings import Settings
 from .store import VideoStore
 from .uploads import Uploads, refused
+from .validation import validate
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     app = FastAPI(title="Target-Lock Video Tracker")
     store = VideoStore()
-    uploads = Uploads(settings, store)
+    uploads = Uploads(settings, store, validate)
     app.state.settings, app.state.store, app.state.uploads = settings, store, uploads
 
     def answer(result: tuple[int, dict]) -> JSONResponse:
