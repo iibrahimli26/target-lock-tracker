@@ -16,6 +16,10 @@ class Session:
         with self.lock:
             self.target = {"frame": frame, "box": box}
 
+    def set_zone(self, box: Box) -> None:
+        with self.lock:
+            self.zone = box
+
     def snapshot(self) -> dict:
         with self.lock:
             target = None if self.target is None else {"frame": self.target["frame"], "box": self.target["box"].as_list()}

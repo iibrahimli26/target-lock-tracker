@@ -109,6 +109,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session.set_target(body.frame, box)
         return {"target": session.snapshot()["target"]}
 
+    @app.put("/api/video/{video_id}/zone")
+    def set_zone(video_id: str, body: BoxBody):
+        video = store.get(video_id)
+        if video is None:
+            return answer(refused(404, [msg.no_video()]))
+        box, refusal = checked_box(video, body)
+        if refusal is not None:
+            return refusal
+        session = session_of(video)
+        session.set_zone(box)
+        return {"zone": session.snapshot()["zone"]}
+
     @app.get("/api/video/{video_id}/tracking")
     def tracking_state(video_id: str):
         video = store.get(video_id)
