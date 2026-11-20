@@ -4,13 +4,21 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
+from pydantic import BaseModel
 
 from . import messages as msg
 from .frames import FrameReader, FrameUnreadable
+from .geometry import Box
 from .settings import Settings
 from .store import VideoStore
+from .tracking import Session
 from .uploads import Uploads, refused
-from .validation import validate
+from .validation import box_problem, validate
+
+
+class BoxBody(BaseModel):
+    box: tuple[float, float, float, float]      # x, y, width, height in picture pixels
+    frame: int = 0                              # frame index from 0
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -35,6 +43,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if "frames" not in video.resources:
             video.resources["frames"] = FrameReader(video.path, video.metadata["frame_count"])
         return video.resources["frames"]
+
+    def session_of(video) -> Session:
+        if "session" not in video.resources:
+            video.resources["session"] = Session(video.path, video.metadata, settings)
+        return video.resources["session"]
+
+    def checked_box(video, body: BoxBody):
+        """(Box, None) when the box is acceptable, else (None, refusal)."""
+        box = Box(*body.box)
+        meta = video.metadata
+        problem = box_problem(box, meta["width"], meta["height"], settings)
+        if problem is not None:
+            return None, answer(refused(422, [problem]))
+        return box, None
 
     @app.post("/api/upload")
     async def upload(request: Request):
@@ -71,5 +93,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except FrameUnreadable:                                 # OQ-8: the damage shows only now
             return answer(refused(422, [msg.frame_unreadable(index)]))
         return Response(content=jpeg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+    @app.put("/api/video/{video_id}/target")
+    def set_target(video_id: str, body: BoxBody):
+        video = store.get(video_id)
+        if video is None:
+            return answer(refused(404, [msg.no_video()]))
+        frame_count = video.metadata["frame_count"]
+        if not 0 <= body.frame < frame_count:
+            return answer(refused(404, [msg.frame_out_of_range(body.frame, frame_count)]))
+        box, refusal = checked_box(video, body)
+        if refusal is not None:
+            return refusal
+        session = session_of(video)
+        session.set_target(body.frame, box)
+        return {"target": session.snapshot()["target"]}
+
+    @app.get("/api/video/{video_id}/tracking")
+    def tracking_state(video_id: str):
+        video = store.get(video_id)
+        if video is None:
+            return answer(refused(404, [msg.no_video()]))
+        return session_of(video).snapshot()
 
     return app
