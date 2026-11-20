@@ -4,11 +4,25 @@ Append one entry per implementation pass (one story per pass), **most recent fir
 
 > **Read this first.** All passes below were made on 2026-11-20 after the operator instructed the agent to continue and finish the project (quoted in `docs/APPROVAL_LOG.md`). **Approval basis for every pass: none signed.** The requirement and architecture entries were unsigned when the code was written. Implementation questions (`IQ-`) were decided by the agent and are marked so. Pull requests could not be opened from the agent's environment; every branch was merged into `main` locally with a merge commit instead of a squash-merged pull request. Each pass names its test commit (red) and its code commit (green) so the order can be checked in the Git history.
 
-**Final state:** `python run.py test` → 246 backend tests (pytest), 68 page-logic tests (Vitest), 13 browser tests (Playwright, Chromium) pass. 3 further backend tests with real 1 GB files are opt-in (`--slow`) and passed when run once.
+**Final state:** `python run.py test` → 246 backend tests (pytest), 68 page-logic tests (Vitest), 14 browser tests (Playwright, Chromium) pass on the agent's Linux machine. 3 further backend tests with real 1 GB files are opt-in (`--slow`) and passed when run once.
 
 **Scenarios without an end-to-end automated test** (their logic is tested, the on-screen behaviour was not driven by a test): AC-1.4 (cancelling the file chooser), AC-6.9e (dragging the slider fast; the newest-request rule behind it is tested and rapid stepping is driven in the browser), AC-7.4 (moving and resizing a box with the mouse; the geometry is tested), AC-9.3 beyond presence of the numbers, AC-15.2 for the amber colour (green and red are asserted).
 
 ---
+
+## Pass: 2026-11-20 — Fix: Pause landed one frame off (found by the operator's test run on Windows)
+
+**Branch:** `bugfix/pause-frame-mismatch` · **Red:** `0930cdb` · **Green:** `2459d7b`
+**Traces to:** AC-9.2, AC-6.6 (picture and position agree).
+**Found by:** the operator ran `python run.py test` on a Windows laptop; `test_playback_draws_over_the_player_and_stops_on_an_exact_frame` failed: the counter read 4 while the still showed frame 3. The test had passed on the agent's Linux machine.
+**Cause:** Pause computed the frame from the player's `currentTime`, which on that machine lags the frame the browser has just shown. The page also stored a newly shown frame a moment before painting its number.
+**Red:** the test now reads the frame number at the instant Pause is pressed and requires counter, slider and still to stay on it for a second. A "lagging" variant makes `currentTime` trail the shown frame by 40 ms. It failed 3 of 3 runs before the fix.
+**Green:** Pause uses the frame number as painted on screen; per-frame notices after Pause are ignored. Both variants passed 30 of 30 runs.
+**Deviation:** the playback test was changed, but to make it stricter, not to make it pass. Browser tests: 13 → 14.
+
+| ID | Question | Status | Resolution |
+|---|---|---|---|
+| IQ-14 | When paused, which frame is "the frame on screen": the one the player's clock names, or the one whose number is shown? | Resolved | Decided by the agent: the one whose number is shown. Reason: it is what the operator was reading when they pressed Pause. |
 
 ## Pass: 2026-11-20 — One-command run and test (brief §3)
 

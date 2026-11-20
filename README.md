@@ -26,7 +26,7 @@ This runs the three test suites and prints one result line for each:
 |---|---|---|
 | Backend (pytest) | Upload rules, frame access, lock logic, tracking, loss and resume | 246 tests |
 | Page logic (Vitest) | Number formats, time-to-frame mapping, box drawing, step and upload decisions | 68 tests |
-| Browser (Playwright, Chromium) | The console driven end to end against the real application | 13 tests |
+| Browser (Playwright, Chromium) | The console driven end to end against the real application | 14 tests |
 
 The browser suite downloads Chromium on first use; without it those tests are skipped with a message. `python run.py test --slow` adds three tests that write real 1 GB files to a temporary folder.
 
