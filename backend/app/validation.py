@@ -1,6 +1,7 @@
 """All checks on an uploaded file. Every problem that can be found is
 reported in one go (OQ-11)."""
 import pathlib
+from fractions import Fraction
 
 from . import messages as msg
 from . import mp4probe
@@ -50,4 +51,54 @@ def validate(path: pathlib.Path, size: int, settings: Settings) -> tuple[dict, l
         problems.append(msg.resolution(track.width, track.height, settings.max_pixels))
     if track.width < track.height:                          # OQ-4: landscape or square (stored size, AQ-9)
         problems.append(msg.orientation(track.width, track.height))
-    return {}, problems, warnings
+    if track.rotation != 0:                                 # OQ-9
+        problems.append(msg.rotation(track.rotation))
+    if problems:
+        return {}, problems, []
+
+    variable = is_variable_frame_rate(track.runs)
+    if variable:                                            # OQ-7
+        warnings.append(msg.variable_frame_rate())
+    return metadata(track, variable), [], warnings
+
+
+def metadata(track: mp4probe.Track, variable: bool) -> dict:
+    """Header values of the picture track (OQ-8): nothing is decoded."""
+    listed = sum(count * ticks for count, ticks in track.runs)
+    ticks = track.duration or listed                        # the track header's own duration
+    seconds = Fraction(ticks, track.timescale) if track.timescale else Fraction(0)
+    rate = Fraction(track.frame_count) / seconds if seconds else Fraction(0)
+    return {
+        "width": track.width, "height": track.height,
+        "frame_count": track.frame_count,
+        "duration_seconds": float(seconds),
+        "fps": {"num": rate.numerator, "den": rate.denominator, "value": float(rate)},   # frames / duration: the average
+        "variable_frame_rate": variable,
+        "timing": {"timescale": track.timescale, "runs": [list(run) for run in track.runs]},
+    }
+
+
+def is_variable_frame_rate(runs: list) -> bool:
+    """AQ-3. Gaps between the starts of consecutive frames, in header ticks; the last
+    frame's own length is not a gap. Variable when the longest and the shortest gap
+    differ by more than max(1 tick, 1 % of the median gap)."""
+    gaps = [[ticks, count] for count, ticks in runs if count > 0]
+    if gaps:
+        gaps[-1][1] -= 1
+    gaps = sorted(g for g in gaps if g[1] > 0)
+    total = sum(count for _, count in gaps)
+    if total < 2:
+        return False
+    shortest, longest = gaps[0][0], gaps[-1][0]
+    return (longest - shortest) > max(1.0, 0.01 * _median(gaps, total))
+
+
+def _median(sorted_gaps: list, total: int) -> float:
+    def value_at(position: int) -> int:
+        seen = 0
+        for ticks, count in sorted_gaps:
+            seen += count
+            if position < seen:
+                return ticks
+        return sorted_gaps[-1][0]
+    return (value_at((total - 1) // 2) + value_at(total // 2)) / 2

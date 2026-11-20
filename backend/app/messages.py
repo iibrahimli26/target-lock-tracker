@@ -108,3 +108,14 @@ def orientation(width: int, height: int) -> Message:
     found, allowed = f"{width} × {height}, portrait", "landscape or square"
     return Message("orientation", f"Only landscape or square videos are supported: found {found}, allowed {allowed}.",
                    found=found, allowed=allowed)
+
+
+def rotation(degrees: int | None) -> Message:
+    found = f"rotation of {degrees} degrees" if degrees is not None else "a display transform other than a plain turn"
+    return Message("rotation", f"Rotated videos are not supported: found {found}, allowed no rotation.",
+                   found=found, allowed="no rotation")
+
+
+def variable_frame_rate() -> Message:
+    return Message("variable_frame_rate", "This video has a variable frame rate. The frame rate shown is an average, "
+                                          "and times are approximate.")
