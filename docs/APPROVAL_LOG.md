@@ -78,6 +78,38 @@
 - **Approved By**: <!-- leave blank until a human operator approves -->
 - **Approval Date**: <!-- leave blank until approved -->
 
+### Entry 3 — Requirement Analysis — Features 2 to 6
+
+- **Status**: Pending Approval
+- **Stage**: Requirement Analysis
+- **Session Started**: 2026-11-20
+- **Related Doc(s)**: docs/design/DESIGN_e64c4e2.md (US-7 to US-15, OQ-20 to OQ-35)
+- **Requested By**: Human operator (project owner), by the instruction quoted at the top of this log
+- **Decisions / Scope Covered**:
+  - Nine user stories (US-7 to US-15) with Gherkin scenarios for target selection, tracking, playback with boxes, lock zone, lock status and periods, loss detection, re-selection, analytics and timeline; the non-functional requirements of brief §3.
+  - The five features were written in one session, not one feature per round, because of the instruction to finish.
+  - All sixteen Open Questions (OQ-20 to OQ-35) were decided by the agent; none was answered by the operator. Each has its reason in the document and can be overturned.
+- **Open Questions Resolved This Session**:
+  - OQ-20 to OQ-35 — decided by the agent (see docs/design/DESIGN_e64c4e2.md, Open Questions).
+- **Approved By**: <!-- leave blank until a human operator approves -->
+- **Approval Date**: <!-- leave blank until approved -->
+
+### Entry 4 — Solution Architecture — Features 2 to 6
+
+- **Status**: Pending Approval
+- **Stage**: Solution Architecture
+- **Session Started**: 2026-11-20
+- **Related Doc(s)**: docs/architecture/ARCHITECTURE_e64c4e2.md; input: Entry 3 (unsigned when this stage was written)
+- **Requested By**: Human operator (project owner), by the instruction quoted at the top of this log
+- **Decisions / Scope Covered**:
+  - Entities: Box (with the "inside" and "area changed" predicates), FrameResult, TrackingRun, LockPeriod/Analytics.
+  - Decisions with benefit/drawback tables: OpenCV tracker (CSRT, with measurements), how tracking runs and reports, where lock logic lives, which frame is on screen during playback.
+  - All seven architecture questions (AQ-11 to AQ-17) were decided by the agent.
+- **Open Questions Resolved This Session**:
+  - AQ-11 to AQ-17 — decided by the agent (see docs/architecture/ARCHITECTURE_e64c4e2.md, Open Questions).
+- **Approved By**: <!-- leave blank until a human operator approves -->
+- **Approval Date**: <!-- leave blank until approved -->
+
 ---
 
 ## History
