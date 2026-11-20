@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Runtime data: uploaded videos are never committed
+data/
+*.log
+
+# Secrets
+.env
+.env.*
+
+# Large or generated test files (created during test runs)
+backend/tests/tmp/
+e2e/artifacts/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
