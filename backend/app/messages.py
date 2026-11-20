@@ -134,3 +134,15 @@ def frame_out_of_range(index: int, frame_count: int) -> Message:
 def frame_unreadable(index: int) -> Message:
     return Message("frame_unreadable", f"The file is damaged: frame {num(index + 1)} cannot be read.",
                    found=f"frame {num(index + 1)}")
+
+
+def box_too_small(width: float, height: float, minimum: int) -> Message:
+    found, allowed = f"{width:g} × {height:g} pixels", f"at least {minimum} × {minimum} pixels"
+    return Message("box_too_small", f"The box is too small: found {found}, allowed {allowed}.", found=found, allowed=allowed)
+
+
+def box_outside_picture(box, width: int, height: int) -> Message:
+    found = f"x {box.x:g} to {box.x + box.w:g}, y {box.y:g} to {box.y + box.h:g}"
+    allowed = f"inside the {width} × {height} picture"
+    return Message("box_outside_picture", f"The box must lie inside the picture: found {found}, allowed {allowed}.",
+                   found=found, allowed=allowed)

@@ -1,10 +1,12 @@
 """All checks on an uploaded file. Every problem that can be found is
 reported in one go (OQ-11)."""
+import math
 import pathlib
 from fractions import Fraction
 
 from . import messages as msg
 from . import mp4probe
+from .geometry import Box
 from .settings import Settings
 
 H264 = {"avc1", "avc3"}
@@ -102,3 +104,14 @@ def _median(sorted_gaps: list, total: int) -> float:
                 return ticks
         return sorted_gaps[-1][0]
     return (value_at((total - 1) // 2) + value_at(total // 2)) / 2
+
+
+def box_problem(box: Box, width: int, height: int, settings: Settings):
+    """Checks a box the operator drew (target box or lock zone). None means it is fine."""
+    if not all(math.isfinite(v) for v in (box.x, box.y, box.w, box.h)):
+        return msg.bad_request()
+    if box.w < settings.min_box_side or box.h < settings.min_box_side:          # OQ-21
+        return msg.box_too_small(box.w, box.h, settings.min_box_side)
+    if box.x < 0 or box.y < 0 or box.x + box.w > width or box.y + box.h > height:   # OQ-22
+        return msg.box_outside_picture(box, width, height)
+    return None
