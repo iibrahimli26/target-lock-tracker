@@ -7,6 +7,7 @@ from typing import AsyncIterator, Callable
 from . import messages as msg
 from .settings import Settings
 from .store import Video, VideoStore
+from .validation import size_problem
 
 # (path, size, settings) -> (metadata, problems, warnings)
 Validator = Callable[[pathlib.Path, int, Settings], tuple[dict, list, list]]
@@ -27,6 +28,8 @@ class Uploads:
     async def receive(self, chunks: AsyncIterator[bytes], name: str, declared_size: int | None) -> tuple[int, dict]:
         """Returns (HTTP status, JSON body)."""
         token = self.store.begin_upload()
+        if declared_size is not None and (too_large := size_problem(declared_size, self.settings)):
+            return refused(413, [too_large])               # refused before a single byte is stored
         video_id = uuid.uuid4().hex
         path = self.data_dir / f"{video_id}.mp4"          # never built from the client's file name
         size = 0
@@ -34,14 +37,19 @@ class Uploads:
             with open(path, "wb") as out:
                 async for chunk in chunks:
                     size += len(chunk)
+                    if size > self.settings.max_upload_bytes:      # stop reading as soon as the limit is passed
+                        break
                     out.write(chunk)
         except Exception:
             path.unlink(missing_ok=True)
             return refused(400, [msg.upload_interrupted()])
 
+        if size > self.settings.max_upload_bytes:
+            path.unlink(missing_ok=True)
+            return refused(413, [size_problem(None, self.settings)])
         if size == 0:
             path.unlink(missing_ok=True)
-            return refused(400, [msg.no_file()])
+            return refused(422, [msg.empty_file()]) if name else refused(400, [msg.no_file()])
 
         metadata, problems, warnings = self.validate(path, size, self.settings)
         if problems:
