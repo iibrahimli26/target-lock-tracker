@@ -52,8 +52,15 @@ python3 - <<'EOF'
 data = open("_ref_fs.mp4", "rb").read()
 i = data.find(b"mdat")                       # index (moov) comes first, picture data after it
 open("damaged_720p.mp4", "wb").write(data[: i + (len(data) - i) // 2])   # REF-X: index intact, data cut
-plain = open("ref_720p.mp4", "rb").read()    # moov at the end: cutting the end removes the index
-open("truncated.mp4", "wb").write(plain[: len(plain) // 2])
+# truncated.mp4: what a recording looks like when it stops before its index is written:
+# the file-type box and the first half of the picture data, and no index (moov) at all.
+import struct
+plain, pos, boxes = open("ref_720p.mp4", "rb").read(), 0, {}
+while pos + 8 <= len(plain):
+    size, kind = struct.unpack(">I4s", plain[pos:pos + 8])
+    boxes[kind] = plain[pos:pos + size]
+    pos += size
+open("truncated.mp4", "wb").write(boxes[b"ftyp"] + boxes[b"mdat"][: len(boxes[b"mdat"]) // 2])
 EOF
 
 # --- other containers and codecs -------------------------------------------
