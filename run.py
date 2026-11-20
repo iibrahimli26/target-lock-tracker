@@ -75,6 +75,22 @@ def build_page() -> None:
         must([npm(), "run", "build"], FRONTEND, "building the page")
 
 
+def open_when_ready(url: str, port: int, timeout: float = 120.0) -> None:
+    """Open the browser only once the server answers (loading OpenCV can take a while)."""
+    import socket
+    import time
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                say(f"ready: open {url} in your browser if it did not open by itself")
+                webbrowser.open(url)
+                return
+        except OSError:
+            time.sleep(0.25)
+    say(f"the server did not answer within {int(timeout)} s; see the messages above")
+
+
 def start(args: list) -> int:
     port = args[args.index("--port") + 1] if "--port" in args else "8000"
     python = python_for(args, dev=False)
@@ -82,7 +98,7 @@ def start(args: list) -> int:
     url = f"http://127.0.0.1:{port}"
     say(f"starting at {url}  (Ctrl+C stops it)")
     if "--no-open" not in args:
-        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+        threading.Thread(target=open_when_ready, args=(url, int(port)), daemon=True).start()
     try:
         return run([python, "-m", "uvicorn", "app.main:create_app", "--factory", "--host", "127.0.0.1", "--port", port], BACKEND)
     except KeyboardInterrupt:
