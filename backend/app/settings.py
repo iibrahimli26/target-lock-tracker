@@ -1,5 +1,6 @@
 """Limits and paths. Each limit traces to a resolved Open Question in
 docs/design/DESIGN.md."""
+import pathlib
 from dataclasses import dataclass
 
 MIB = 1024 * 1024  # OQ-2: 1 MB means 1,048,576 bytes
@@ -8,6 +9,7 @@ MIB = 1024 * 1024  # OQ-2: 1 MB means 1,048,576 bytes
 @dataclass(frozen=True)
 class Settings:
     data_dir: str = "data"
+    frontend_dir: str = str(pathlib.Path(__file__).resolve().parents[2] / "frontend" / "dist")   # the built page
     max_upload_bytes: int = 1024 * MIB      # OQ-2: 1 GB = 1,073,741,824 bytes, inclusive
     max_pixels: int = 921_600               # OQ-4 / OQ-18: width x height, inclusive
     min_frames: int = 2                     # OQ-3

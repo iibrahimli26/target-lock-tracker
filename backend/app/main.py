@@ -1,9 +1,11 @@
-"""HTTP API of the Target-Lock Video Tracker."""
+"""HTTP API of the Target-Lock Video Tracker. Also serves the built page."""
+import pathlib
 from urllib.parse import unquote
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import messages as msg
@@ -139,4 +141,7 @@ def create_app(settings: Settings | None = None, tracker_factory=None) -> FastAP
             return answer(refused(404, [msg.no_video()]))
         return session_of(video).snapshot(since, revision)
 
+    page = pathlib.Path(settings.frontend_dir)
+    if page.is_dir():                                       # built by `npm run build` (run.py does it)
+        app.mount("/", StaticFiles(directory=page, html=True), name="page")
     return app
